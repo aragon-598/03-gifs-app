@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { Gif, SearchResponse } from '../interfaces/gifs.interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -7,12 +8,13 @@ import { Injectable } from '@angular/core';
 export class GifsService {
   
   private apiKey:string = 'r6Rp2tXECSRtVqO926d68LAaWkV9Y29J';
-
+  public gifList:Gif[]=[];
   private request:string=`http://api.giphy.com/v1/gifs`;
-
   private _tagsHistory: string[]=[]; //private para evitar modificación desde cualquier dirección
   
-  constructor(private httpClient:HttpClient) { }
+  constructor(private httpClient:HttpClient) { 
+    this.loadLocalStorage();
+  }
 
   /**
    * To return history data and block any update
@@ -30,8 +32,22 @@ export class GifsService {
 
     this._tagsHistory.unshift(tag);
     this._tagsHistory = this._tagsHistory.splice(0,10);
-    console.log(this._tagsHistory);
+    this.saveLocalStorage();
     
+  }
+
+  private saveLocalStorage():void {
+    localStorage.setItem('history',JSON.stringify(this._tagsHistory))
+  }
+
+  private loadLocalStorage() {
+    if (!localStorage.getItem('history')) return;
+
+    this._tagsHistory = JSON.parse(localStorage.getItem('history')!) // "!" siempre vendrá un valor
+
+    if (this._tagsHistory.length===0) return;
+
+    this.searchTag(this._tagsHistory[0]);
   }
 
   searchTag(tag:string):void{
@@ -42,9 +58,9 @@ export class GifsService {
                                    .set('limit','10')
                                    .set('q',tag)
 
-    this.httpClient.get(`${this.request}/search`,{params})
+    this.httpClient.get<SearchResponse>(`${this.request}/search`,{params})
                     .subscribe(res =>{
-                      console.log(res);
+                      this.gifList=res.data;
                       
                     })
   }
